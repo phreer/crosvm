@@ -71,6 +71,7 @@ unsafe impl DataInit for CrossDomainImageRequirements {}
 
 #[repr(C)]
 #[derive(Copy, Clone, Default)]
+#[derive(Debug)]
 pub struct CrossDomainHeader {
     pub cmd: u8,
     pub ring_idx: u8,
@@ -84,7 +85,8 @@ unsafe impl DataInit for CrossDomainHeader {}
 #[derive(Copy, Clone, Default)]
 pub struct CrossDomainInit {
     pub hdr: CrossDomainHeader,
-    pub ring_id: u32,
+    pub query_ring_id: u32,
+    pub channel_ring_id: u32,
     pub channel_type: u32,
 }
 

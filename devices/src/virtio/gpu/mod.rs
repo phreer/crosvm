@@ -94,11 +94,13 @@ pub struct VirtioScanoutBlobData {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug)]
 enum VirtioGpuRing {
     Global,
     ContextSpecific { ctx_id: u32, ring_idx: u8 },
 }
 
+#[derive(Debug)]
 struct FenceDescriptor {
     ring: VirtioGpuRing,
     fence_id: u64,
@@ -250,9 +252,11 @@ where
                 },
             };
 
+            println!("fence_handler(): processing fence: {:?}", completed_fence);
             let mut fence_state = fence_state.lock();
             fence_state.descs.retain(|f_desc| {
                 if f_desc.ring == ring && f_desc.fence_id <= completed_fence.fence_id {
+                    println!("remove fence descriptor {:?}", f_desc);
                     ctrl_queue.add_used(&mem, f_desc.index, f_desc.len);
                     signal = true;
                     return false;
@@ -491,6 +495,7 @@ impl Frontend {
                 }
             }
             GpuCommand::ResourceCreateBlob(info) => {
+                println!("process_gpu_command(): resource_create_blob");
                 let resource_id = info.resource_id.to_native();
                 let ctx_id = info.hdr.ctx_id.to_native();
 
@@ -660,6 +665,13 @@ impl Frontend {
                     ctx_id = ctrl_hdr.ctx_id.to_native();
                     ring_idx = ctrl_hdr.ring_idx;
 
+                    // Debug
+                    if ring_idx == 1 {
+                        if let GpuCommand::CmdSubmit3d(data) = cmd {
+                            println!("process_descriptor(): CmdSubmit3d: {:?}", data);
+                        };
+                        println!("process_descriptor(): cmd = {:?}, ctrl_hdr = {:?}", cmd, ctrl_hdr);
+                    }
                     let fence = RutabagaFence {
                         flags,
                         fence_id,
