@@ -5,6 +5,7 @@
 //! rutabaga_core: Cross-platform, Rust-based, Wayland and Vulkan centric GPU virtualization.
 
 use std::collections::BTreeMap as Map;
+use sync::Mutex;
 use std::sync::Arc;
 
 use base::SafeDescriptor;
@@ -275,7 +276,7 @@ pub fn calculate_context_types(context_mask: u64) -> Vec<String> {
 /// Not thread-safe, but can be made so easily.  Making non-Rutabaga, C/C++ components
 /// thread-safe is more difficult.
 pub struct Rutabaga {
-    resources: Map<u32, RutabagaResource>,
+    resources: Arc<Mutex<Map<u32, RutabagaResource>>>,
     contexts: Map<u32, Box<dyn RutabagaContext>>,
     // Declare components after resources and contexts such that it is dropped last.
     components: Map<RutabagaComponentType, Box<dyn RutabagaComponent>>,
@@ -391,12 +392,12 @@ impl Rutabaga {
             .get_mut(&self.default_component)
             .ok_or(RutabagaError::InvalidComponent)?;
 
-        if self.resources.contains_key(&resource_id) {
+        if self.resources.lock().contains_key(&resource_id) {
             return Err(RutabagaError::InvalidResourceId);
         }
 
         let resource = component.create_3d(resource_id, resource_create_3d)?;
-        self.resources.insert(resource_id, resource);
+        self.resources.lock().insert(resource_id, resource);
         Ok(())
     }
 
@@ -411,8 +412,8 @@ impl Rutabaga {
             .get_mut(&self.default_component)
             .ok_or(RutabagaError::InvalidComponent)?;
 
-        let mut resource = self
-            .resources
+        let mut resources = self.resources.lock();
+        let mut resource = resources
             .get_mut(&resource_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
@@ -428,8 +429,8 @@ impl Rutabaga {
             .get_mut(&self.default_component)
             .ok_or(RutabagaError::InvalidComponent)?;
 
-        let resource = self
-            .resources
+        let mut resources = self.resources.lock();
+        let resource = resources
             .get_mut(&resource_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
@@ -445,9 +446,8 @@ impl Rutabaga {
             .get_mut(&self.default_component)
             .ok_or(RutabagaError::InvalidComponent)?;
 
-        self.resources
-            .remove(&resource_id)
-            .ok_or(RutabagaError::InvalidResourceId)?;
+        let mut resources = self.resources.lock();
+        resources.remove(&resource_id).ok_or(RutabagaError::InvalidResourceId)?;
 
         component.unref_resource(resource_id);
         Ok(())
@@ -466,8 +466,8 @@ impl Rutabaga {
             .get(&self.default_component)
             .ok_or(RutabagaError::InvalidComponent)?;
 
-        let resource = self
-            .resources
+        let mut resources = self.resources.lock();
+        let resource = resources
             .get_mut(&resource_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
@@ -490,8 +490,8 @@ impl Rutabaga {
             .get(&self.default_component)
             .ok_or(RutabagaError::InvalidComponent)?;
 
-        let resource = self
-            .resources
+        let mut resources = self.resources.lock();
+        let resource = resources
             .get_mut(&resource_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
@@ -504,8 +504,8 @@ impl Rutabaga {
             .get(&self.default_component)
             .ok_or(RutabagaError::Unsupported)?;
 
-        let resource = self
-            .resources
+        let mut resources = self.resources.lock();
+        let resource = resources
             .get_mut(&resource_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
@@ -523,7 +523,7 @@ impl Rutabaga {
         iovecs: Option<Vec<RutabagaIovec>>,
         handle: Option<RutabagaHandle>,
     ) -> RutabagaResult<()> {
-        if self.resources.contains_key(&resource_id) {
+        if self.resources.lock().contains_key(&resource_id) {
             return Err(RutabagaError::InvalidResourceId);
         }
 
@@ -554,7 +554,7 @@ impl Rutabaga {
             }
         };
 
-        self.resources.insert(resource_id, resource);
+        self.resources.lock().insert(resource_id, resource);
         Ok(())
     }
 
@@ -565,7 +565,7 @@ impl Rutabaga {
             .get(&self.default_component)
             .ok_or(RutabagaError::InvalidComponent)?;
 
-        if !self.resources.contains_key(&resource_id) {
+        if !self.resources.lock().contains_key(&resource_id) {
             return Err(RutabagaError::InvalidResourceId);
         }
 
@@ -579,7 +579,7 @@ impl Rutabaga {
             .get(&self.default_component)
             .ok_or(RutabagaError::InvalidComponent)?;
 
-        if !self.resources.contains_key(&resource_id) {
+        if !self.resources.lock().contains_key(&resource_id) {
             return Err(RutabagaError::InvalidResourceId);
         }
 
@@ -589,8 +589,8 @@ impl Rutabaga {
     /// Returns the `map_info` of the blob resource. The valid values for `map_info`
     /// are defined in the virtio-gpu spec.
     pub fn map_info(&self, resource_id: u32) -> RutabagaResult<u32> {
-        let resource = self
-            .resources
+        let mut resources = self.resources.lock();
+        let resource = resources
             .get(&resource_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
@@ -602,8 +602,8 @@ impl Rutabaga {
     /// Returns the `vulkan_info` of the blob resource, which consists of the physical device
     /// index and memory index associated with the resource.
     pub fn vulkan_info(&self, resource_id: u32) -> RutabagaResult<VulkanInfo> {
-        let resource = self
-            .resources
+        let mut resources = self.resources.lock();
+        let resource = resources
             .get(&resource_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
@@ -612,8 +612,8 @@ impl Rutabaga {
 
     /// Returns the 3D info associated with the resource, if any.
     pub fn query(&self, resource_id: u32) -> RutabagaResult<Resource3DInfo> {
-        let resource = self
-            .resources
+        let mut resources = self.resources.lock();
+        let resource = resources
             .get(&resource_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
@@ -624,8 +624,8 @@ impl Rutabaga {
 
     /// Exports a blob resource.  See virtio-gpu spec for blob flag use flags.
     pub fn export_blob(&mut self, resource_id: u32) -> RutabagaResult<RutabagaHandle> {
-        let resource = self
-            .resources
+        let mut resources = self.resources.lock();
+        let resource = resources
             .get_mut(&resource_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
@@ -705,13 +705,14 @@ impl Rutabaga {
 
     /// Attaches the resource given by `resource_id` to the context given by `ctx_id`.
     pub fn context_attach_resource(&mut self, ctx_id: u32, resource_id: u32) -> RutabagaResult<()> {
+        print!("Rutabaga::context_attach_resource: ctx_id = {}, resource_id = {}", ctx_id, resource_id);
         let ctx = self
             .contexts
             .get_mut(&ctx_id)
             .ok_or(RutabagaError::InvalidContextId)?;
 
-        let resource = self
-            .resources
+        let mut resources = self.resources.lock();
+        let resource = resources
             .get_mut(&resource_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
@@ -726,8 +727,8 @@ impl Rutabaga {
             .get_mut(&ctx_id)
             .ok_or(RutabagaError::InvalidContextId)?;
 
-        let resource = self
-            .resources
+        let mut resources = self.resources.lock();
+        let resource = resources
             .get_mut(&resource_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
@@ -981,7 +982,7 @@ impl RutabagaBuilder {
         }
 
         Ok(Rutabaga {
-            resources: Default::default(),
+            resources: Arc::new(Mutex::new(Default::default())),
             contexts: Default::default(),
             components: rutabaga_components,
             default_component: self.default_component,

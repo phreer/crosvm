@@ -712,6 +712,7 @@ impl VirtioGpu {
 
         // Rely on rutabaga to check for duplicate resource ids.
         self.resources.insert(resource_id, resource);
+        println!("resource_create_blob: resource_id = {}, resource_create_blob = {:?}", resource_id, resource_create_blob);
         Ok(self.result_from_query(resource_id))
     }
 

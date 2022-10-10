@@ -137,9 +137,17 @@ impl CrossDomainContext {
             if *identifier_type == CROSS_DOMAIN_ID_TYPE_VIRTGPU_BLOB {
                 let context_resources = self.context_resources.lock();
 
-                let context_resource = context_resources
-                    .get(identifier)
-                    .ok_or(RutabagaError::InvalidResourceId)?;
+                let __context_resource = context_resources
+                    .get(identifier);
+                
+                if __context_resource.is_none() {
+                    println!("failed to find resource for resource id: {}", identifier);
+                    for (k, v) in context_resources.iter() {
+                        println!("k: {}", k);
+                    }
+                }
+                
+                let context_resource = __context_resource.ok_or(RutabagaError::InvalidResourceId)?;
 
                 if let Some(ref handle) = context_resource.handle {
                     *descriptor = handle.os_handle.as_raw_descriptor();
