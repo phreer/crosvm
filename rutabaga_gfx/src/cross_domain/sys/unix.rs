@@ -28,6 +28,7 @@ use super::super::cross_domain_protocol::CROSS_DOMAIN_MAX_IDENTIFIERS;
 use crate::cross_domain::cross_domain_protocol::CrossDomainInit;
 use crate::RutabagaError;
 use crate::RutabagaResult;
+use crate::rutabaga_core::RutabagaContext;
 
 // TODO(b:231309513): The alias can be moved to base crate for wider use.
 pub(crate) type SystemStream = std::os::unix::net::UnixStream;
@@ -135,19 +136,19 @@ impl CrossDomainContext {
 
         for ((identifier, identifier_type), descriptor) in iter {
             if *identifier_type == CROSS_DOMAIN_ID_TYPE_VIRTGPU_BLOB {
-                let context_resources = self.context_resources.lock();
+                let resources = self.global_resources.as_ref().unwrap().lock();
 
-                let __context_resource = context_resources
-                    .get(identifier);
+                let resource = resources.get(identifier);
                 
-                if __context_resource.is_none() {
+                if resource.is_none() {
                     println!("failed to find resource for resource id: {}", identifier);
-                    for (k, v) in context_resources.iter() {
+                    for (k, _v) in resources.iter() {
                         println!("k: {}", k);
                     }
                 }
                 
-                let context_resource = __context_resource.ok_or(RutabagaError::InvalidResourceId)?;
+                let context_resource = resource.ok_or(RutabagaError::InvalidResourceId)?;
+                println!("send(): {:?}", context_resource);
 
                 if let Some(ref handle) = context_resource.handle {
                     *descriptor = handle.os_handle.as_raw_descriptor();

@@ -36,6 +36,7 @@ use vulkano::LoadingError;
 /// of the buffer.
 #[repr(C)]
 #[derive(Copy, Clone)]
+#[derive(Debug)]
 pub struct RutabagaIovec {
     pub base: *mut c_void,
     pub len: usize,
@@ -99,6 +100,7 @@ pub struct Resource3DInfo {
 
 /// Memory index and physical device index of the associated VkDeviceMemory.
 #[derive(Copy, Clone, Default)]
+#[derive(Debug)]
 pub struct VulkanInfo {
     pub memory_idx: u32,
     pub physical_device_idx: u32,
@@ -587,6 +589,7 @@ pub const RUTABAGA_FENCE_HANDLE_TYPE_SYNC_FD: u32 = 0x0011;
 pub const RUTABAGE_FENCE_HANDLE_TYPE_OPAQUE_WIN32: u32 = 0x0012;
 
 /// Handle to OS-specific memory or synchronization objects.
+#[derive(Debug)]
 pub struct RutabagaHandle {
     pub os_handle: SafeDescriptor,
     pub handle_type: u32,

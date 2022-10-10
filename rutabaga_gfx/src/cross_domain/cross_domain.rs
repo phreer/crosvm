@@ -108,6 +108,7 @@ pub(crate) struct CrossDomainContext {
     gralloc: Arc<Mutex<RutabagaGralloc>>,
     pub(crate) state: Option<Arc<CrossDomainState>>,
     pub(crate) context_resources: CrossDomainResources,
+    pub(crate) global_resources: Option<Arc<Mutex<Map<u32, RutabagaResource>>>>,
     pub(crate) item_state: CrossDomainItemState,
     fence_handler: RutabagaFenceHandler,
     worker_thread: Option<thread::JoinHandle<RutabagaResult<()>>>,
@@ -830,6 +831,10 @@ impl RutabagaContext for CrossDomainContext {
     fn component_type(&self) -> RutabagaComponentType {
         RutabagaComponentType::CrossDomain
     }
+
+    fn set_global_resource(&mut self, global_resources: Arc<Mutex<Map<u32, RutabagaResource>>>) {
+        self.global_resources = Some(global_resources.clone());
+    }
 }
 
 impl RutabagaComponent for CrossDomain {
@@ -901,6 +906,7 @@ impl RutabagaComponent for CrossDomain {
             gralloc: self.gralloc.clone(),
             state: None,
             context_resources: Arc::new(Mutex::new(Default::default())),
+            global_resources: None,
             item_state: Arc::new(Mutex::new(Default::default())),
             fence_handler,
             worker_thread: None,

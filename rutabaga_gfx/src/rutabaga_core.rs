@@ -20,6 +20,7 @@ use crate::rutabaga_utils::*;
 use crate::virgl_renderer::VirglRenderer;
 
 /// Information required for 2D functionality.
+#[derive(Debug)]
 pub struct Rutabaga2DInfo {
     pub width: u32,
     pub height: u32,
@@ -27,6 +28,7 @@ pub struct Rutabaga2DInfo {
 }
 
 /// A Rutabaga resource, supporting 2D and 3D rutabaga features.  Assumes a single-threaded library.
+#[derive(Debug)]
 pub struct RutabagaResource {
     pub resource_id: u32,
     pub handle: Option<Arc<RutabagaHandle>>,
@@ -207,6 +209,8 @@ pub trait RutabagaContext {
 
     /// Implementations must return the component type associated with the context.
     fn component_type(&self) -> RutabagaComponentType;
+    
+    fn set_global_resource(&mut self, global_resources: Arc<Mutex<Map<u32, RutabagaResource>>>) {}
 }
 
 #[derive(Copy, Clone)]
@@ -685,12 +689,13 @@ impl Rutabaga {
             return Err(RutabagaError::InvalidContextId);
         }
 
-        let ctx = component.create_context(
+        let mut ctx = component.create_context(
             ctx_id,
             context_init,
             context_name,
             self.fence_handler.clone(),
         )?;
+        ctx.set_global_resource(self.resources.clone());
         self.contexts.insert(ctx_id, ctx);
         Ok(())
     }
