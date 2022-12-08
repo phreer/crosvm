@@ -84,7 +84,8 @@ unsafe impl DataInit for CrossDomainHeader {}
 #[derive(Copy, Clone, Default)]
 pub struct CrossDomainInit {
     pub hdr: CrossDomainHeader,
-    pub ring_id: u32,
+    pub query_ring_id: u32,
+    pub channel_ring_id: u32,
     pub channel_type: u32,
 }
 
