@@ -85,7 +85,8 @@ pub(crate) struct CrossDomainItems {
 
 pub(crate) struct CrossDomainState {
     context_resources: CrossDomainResources,
-    ring_id: u32,
+    query_ring_id: u32,
+    channel_ring_id: u32,
     #[allow(dead_code)] // `connection` is never used on Windows.
     pub(crate) connection: Option<SystemStream>,
     jobs: CrossDomainJobs,
@@ -154,13 +155,15 @@ impl Default for CrossDomainItems {
 
 impl CrossDomainState {
     fn new(
-        ring_id: u32,
+        query_ring_id: u32,
+        channel_ring_id: u32,
         context_resources: CrossDomainResources,
         connection: Option<SystemStream>,
     ) -> CrossDomainState {
         CrossDomainState {
-            ring_id,
             context_resources,
+            query_ring_id,
+            channel_ring_id,
             connection,
             jobs: Mutex::new(Some(VecDeque::new())),
             jobs_cvar: Condvar::new(),
@@ -192,15 +195,22 @@ impl CrossDomainState {
         }
     }
 
-    fn write_to_ring<T>(&self, mut ring_write: RingWrite<T>) -> RutabagaResult<usize>
+    fn write_to_ring<T>(&self, mut ring_write: RingWrite<T>, ring_idx: u32) -> RutabagaResult<usize>
     where
         T: FromBytes + AsBytes,
     {
         let mut context_resources = self.context_resources.lock().unwrap();
         let mut bytes_read: usize = 0;
+        let ring_id = match ring_idx {
+            CROSS_DOMAIN_QUERY_RING => self.query_ring_id,
+            CROSS_DOMAIN_CHANNEL_RING => self.channel_ring_id,
+            _ => {
+                return Err(RutabagaError::InvalidResourceId);
+            }
+        };
 
         let resource = context_resources
-            .get_mut(&self.ring_id)
+            .get_mut(&ring_id)
             .ok_or(RutabagaError::InvalidResourceId)?;
 
         let iovecs = resource
@@ -314,10 +324,8 @@ impl CrossDomainWorker {
                             };
                         }
 
-                        self.state.write_to_ring(RingWrite::Write(
-                            cmd_receive,
-                            Some(&receive_buf[0..len]),
-                        ))?;
+                        self.state.write_to_ring(RingWrite::Write(cmd_receive, Some(&receive_buf[0..len]),), 
+                                                 CROSS_DOMAIN_CHANNEL_RING)?;
                         self.fence_handler.call(fence);
                     }
                 }
@@ -354,7 +362,7 @@ impl CrossDomainWorker {
                                 RingWrite::WriteFromFile(cmd_read, file, event.readable);
                             bytes_read = self
                                 .state
-                                .write_to_ring::<CrossDomainReadWrite>(ring_write)?;
+                                .write_to_ring::<CrossDomainReadWrite>(ring_write, CROSS_DOMAIN_CHANNEL_RING)?;
 
                             // Zero bytes read indicates end-of-file on POSIX.
                             if event.hung_up && bytes_read == 0 {
@@ -445,12 +453,21 @@ impl CrossDomainContext {
             .context_resources
             .lock()
             .unwrap()
-            .contains_key(&cmd_init.ring_id)
+            .contains_key(&cmd_init.query_ring_id)
         {
             return Err(RutabagaError::InvalidResourceId);
         }
 
-        let ring_id = cmd_init.ring_id;
+        if !self
+            .context_resources
+            .lock()
+            .contains_key(&cmd_init.channel_ring_id)
+        {
+            return Err(RutabagaError::InvalidResourceId);
+        }
+
+        let query_ring_id = cmd_init.query_ring_id;
+        let channel_ring_id = cmd_init.channel_ring_id;
         let context_resources = self.context_resources.clone();
 
         // Zero means no requested channel.
@@ -469,7 +486,8 @@ impl CrossDomainContext {
             };
 
             let state = Arc::new(CrossDomainState::new(
-                ring_id,
+                query_ring_id,
+                channel_ring_id,
                 context_resources,
                 connection,
             ));
@@ -496,7 +514,8 @@ impl CrossDomainContext {
             self.kill_evt = Some(kill_evt);
         } else {
             self.state = Some(Arc::new(CrossDomainState::new(
-                ring_id,
+                query_ring_id,
+                channel_ring_id,
                 context_resources,
                 None,
             )));
@@ -542,7 +561,7 @@ impl CrossDomainContext {
 
         if let Some(state) = &self.state {
             response.blob_id = add_item(&self.item_state, CrossDomainItem::ImageRequirements(reqs));
-            state.write_to_ring(RingWrite::Write(response, None))?;
+            state.write_to_ring(RingWrite::Write(response, None), CROSS_DOMAIN_QUERY_RING)?;
             Ok(())
         } else {
             Err(RutabagaError::InvalidCrossDomainState)
