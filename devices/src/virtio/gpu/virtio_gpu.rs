@@ -50,6 +50,7 @@ use super::protocol::GpuResponsePlaneInfo;
 use super::protocol::VirtioGpuResult;
 use super::protocol::VIRTIO_GPU_BLOB_FLAG_CREATE_GUEST_HANDLE;
 use super::protocol::VIRTIO_GPU_BLOB_MEM_HOST3D;
+use super::protocol::VIRTIO_GPU_BLOB_MEM_PRIME;
 use super::VirtioScanoutBlobData;
 use crate::virtio::gpu::edid::DisplayInfo;
 use crate::virtio::gpu::edid::EdidBytes;
@@ -800,7 +801,8 @@ impl VirtioGpu {
         let mut descriptor = None;
         let mut rutabaga_iovecs = None;
 
-        if resource_create_blob.blob_flags & VIRTIO_GPU_BLOB_FLAG_CREATE_GUEST_HANDLE != 0 {
+        if resource_create_blob.blob_flags & VIRTIO_GPU_BLOB_FLAG_CREATE_GUEST_HANDLE != 0
+            && resource_create_blob.blob_mem != VIRTIO_GPU_BLOB_MEM_PRIME {
             descriptor = match self.udmabuf_driver {
                 Some(ref driver) => Some(driver.create_udmabuf(mem, &vecs[..])?),
                 None => return Err(ErrUnspec),
@@ -808,6 +810,13 @@ impl VirtioGpu {
         } else if resource_create_blob.blob_mem != VIRTIO_GPU_BLOB_MEM_HOST3D {
             rutabaga_iovecs =
                 Some(sglist_to_rutabaga_iovecs(&vecs[..], mem).map_err(|_| ErrUnspec)?);
+        }
+
+        if resource_create_blob.blob_mem == VIRTIO_GPU_BLOB_MEM_PRIME {
+            descriptor = match self.udmabuf_driver {
+                Some(ref driver) => Some(driver.create_udmabuf(mem, &vecs[..])?),
+                None => None,
+            }
         }
 
         self.rutabaga.resource_create_blob(
