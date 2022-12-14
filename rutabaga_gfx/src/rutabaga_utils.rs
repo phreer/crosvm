@@ -71,6 +71,7 @@ pub struct ResourceCreate3D {
 pub const RUTABAGA_BLOB_MEM_GUEST: u32 = 0x0001;
 pub const RUTABAGA_BLOB_MEM_HOST3D: u32 = 0x0002;
 pub const RUTABAGA_BLOB_MEM_HOST3D_GUEST: u32 = 0x0003;
+pub const RUTABAGA_BLOB_MEM_PRIME: u32 = 0x0005;
 
 pub const RUTABAGA_BLOB_FLAG_USE_MAPPABLE: u32 = 0x0001;
 pub const RUTABAGA_BLOB_FLAG_USE_SHAREABLE: u32 = 0x0002;
@@ -612,6 +613,7 @@ pub struct RutabagaChannel {
 /// Enumeration of possible rutabaga components.
 #[repr(u8)]
 #[derive(Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug)]
 pub enum RutabagaComponentType {
     Rutabaga2D,
     VirglRenderer,
