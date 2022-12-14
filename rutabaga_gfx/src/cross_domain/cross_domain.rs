@@ -461,6 +461,7 @@ impl CrossDomainContext {
         if !self
             .context_resources
             .lock()
+            .unwrap()
             .contains_key(&cmd_init.channel_ring_id)
         {
             return Err(RutabagaError::InvalidResourceId);
@@ -875,7 +876,9 @@ impl RutabagaComponent for CrossDomain {
         iovec_opt: Option<Vec<RutabagaIovec>>,
         _handle_opt: Option<RutabagaHandle>,
     ) -> RutabagaResult<RutabagaResource> {
+        println!("create_blob for cross domain");
         if resource_create_blob.blob_mem != RUTABAGA_BLOB_MEM_GUEST
+            && resource_create_blob.blob_mem != RUTABAGA_BLOB_MEM_PRIME
             && resource_create_blob.blob_flags != RUTABAGA_BLOB_FLAG_USE_MAPPABLE
         {
             return Err(RutabagaError::SpecViolation(
@@ -883,9 +886,22 @@ impl RutabagaComponent for CrossDomain {
             ));
         }
 
+        let handle = match _handle_opt {
+            Some(handle) => Some(Arc::new(handle)),
+            None => {
+                match resource_create_blob.blob_mem {
+                    RUTABAGA_BLOB_MEM_PRIME => {
+                        return Err(RutabagaError::SpecViolation(
+                            "cannot export udmabuf handle for cross domain PRIME resource"));
+                    }
+                    _ => None,
+                }
+            },
+        };
+
         Ok(RutabagaResource {
             resource_id,
-            handle: None,
+            handle: handle,
             blob: true,
             blob_mem: resource_create_blob.blob_mem,
             blob_flags: resource_create_blob.blob_flags,

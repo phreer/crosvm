@@ -68,6 +68,7 @@ fn import_resource(resource: &mut RutabagaResource) -> RutabagaResult<()> {
                 };
                 let ret = virgl_renderer_resource_import_blob(&args);
                 if ret != 0 {
+                    println!("failed to call virgl_renderer_resource_import_blob, ret = {}, args = {:?}", ret, args);
                     // import_blob can fail if we've previously imported this resource,
                     // but in any case virglrenderer does not take ownership of the fd
                     // in error paths
@@ -594,7 +595,6 @@ impl RutabagaComponent for VirglRenderer {
                 iovec_ptr = iovecs.as_mut_ptr();
                 num_iovecs = iovecs.len();
             }
-
             let resource_create_args = virgl_renderer_resource_create_blob_args {
                 res_handle: resource_id,
                 ctx_id,
@@ -609,11 +609,23 @@ impl RutabagaComponent for VirglRenderer {
             let ret = unsafe { virgl_renderer_resource_create_blob(&resource_create_args) };
             ret_to_res(ret)?;
 
+
+            let (handle, component_mask) = match resource_create_blob.blob_mem {
+                RUTABAGA_BLOB_MEM_PRIME => {
+                    if let Some(handle) = _handle_opt {
+                        (Some(Arc::new(handle)), 0)
+                    } else {
+                        (None, 0)
+                    }
+                },
+                _ => (self.export_blob(resource_id).ok(),
+                      1 << (RutabagaComponentType::VirglRenderer as u32)),
+            };
             // TODO(b/244591751): assign vulkan_info to support opaque_fd mapping via Vulkano when
             // sandboxing (hence external_blob) is enabled.
             Ok(RutabagaResource {
                 resource_id,
-                handle: self.export_blob(resource_id).ok(),
+                handle,
                 blob: true,
                 blob_mem: resource_create_blob.blob_mem,
                 blob_flags: resource_create_blob.blob_flags,
@@ -622,7 +634,7 @@ impl RutabagaComponent for VirglRenderer {
                 info_3d: self.query(resource_id).ok(),
                 vulkan_info: None,
                 backing_iovecs: iovec_opt,
-                component_mask: 1 << (RutabagaComponentType::VirglRenderer as u8),
+                component_mask,
                 size: resource_create_blob.size,
                 mapping: None,
             })
