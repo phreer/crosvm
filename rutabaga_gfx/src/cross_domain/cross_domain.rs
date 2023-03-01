@@ -462,6 +462,7 @@ impl CrossDomainContext {
         if !self
             .context_resources
             .lock()
+            .unwrap()
             .contains_key(&cmd_init.channel_ring_id)
         {
             return Err(RutabagaError::InvalidResourceId);
@@ -884,7 +885,15 @@ impl RutabagaComponent for CrossDomain {
 
         let handle = match _handle_opt {
             Some(handle) => Some(Arc::new(handle)),
-            None => None,
+            None => {
+                match resource_create_blob.blob_mem {
+                    RUTABAGA_BLOB_MEM_PRIME => {
+                        return Err(RutabagaError::SpecViolation(
+                            "cannot export udmabuf handle for cross domain PRIME resource"));
+                    }
+                    _ => None,
+                }
+            },
         };
 
         Ok(RutabagaResource {
