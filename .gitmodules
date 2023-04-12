@@ -3,10 +3,10 @@
 	url = https://chromium.googlesource.com/chromiumos/third_party/tpm2
 [submodule "third_party/minigbm"]
 	path = third_party/minigbm
-	url = https://chromium.googlesource.com/chromiumos/platform/minigbm
+	url = https://github.com/phreer/minigbm.git
 [submodule "third_party/virglrenderer"]
 	path = third_party/virglrenderer
-	url = https://chromium.googlesource.com/chromiumos/third_party/virglrenderer
+	url = https://github.com/phreer/virglrenderer.git
 [submodule "third_party/minijail"]
 	path = third_party/minijail
 	url = https://chromium.googlesource.com/chromiumos/platform/minijail
