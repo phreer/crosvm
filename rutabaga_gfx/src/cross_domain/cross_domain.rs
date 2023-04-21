@@ -118,6 +118,7 @@ pub(crate) struct CrossDomainContext {
 pub struct CrossDomain {
     channels: Option<Vec<RutabagaChannel>>,
     gralloc: Arc<Mutex<RutabagaGralloc>>,
+    fence_handler: RutabagaFenceHandler,
 }
 
 // TODO(gurchetansingh): optimize the item tracker.  Each requirements blob is long-lived and can
@@ -438,11 +439,13 @@ impl CrossDomain {
     /// initializing rutabaga gralloc.
     pub fn init(
         channels: Option<Vec<RutabagaChannel>>,
+        fence_handler: RutabagaFenceHandler,
     ) -> RutabagaResult<Box<dyn RutabagaComponent>> {
         let gralloc = RutabagaGralloc::new()?;
         Ok(Box::new(CrossDomain {
             channels,
             gralloc: Arc::new(Mutex::new(gralloc)),
+            fence_handler
         }))
     }
 }
@@ -843,6 +846,11 @@ impl RutabagaContext for CrossDomainContext {
 }
 
 impl RutabagaComponent for CrossDomain {
+    fn create_fence(&mut self, fence: RutabagaFence) -> RutabagaResult<()> {
+        self.fence_handler.call(fence);
+        Ok(())
+    }
+
     fn get_capset_info(&self, _capset_id: u32) -> (u32, u32) {
         (0u32, size_of::<CrossDomainCapabilities>() as u32)
     }

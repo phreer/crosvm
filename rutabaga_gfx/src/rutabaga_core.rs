@@ -1054,7 +1054,7 @@ impl RutabagaBuilder {
                 push_capset(RUTABAGA_CAPSET_GFXSTREAM);
             }
 
-            let cross_domain = CrossDomain::init(self.channels)?;
+            let cross_domain = CrossDomain::init(self.channels, fence_handler.clone())?;
             rutabaga_components.insert(RutabagaComponentType::CrossDomain, cross_domain);
             push_capset(RUTABAGA_CAPSET_CROSS_DOMAIN);
         }
