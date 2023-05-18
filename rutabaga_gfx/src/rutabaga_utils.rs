@@ -125,6 +125,7 @@ pub const RUTABAGA_FLAG_INFO_RING_IDX: u32 = 1 << 1;
 /// Convenience struct for Rutabaga fences
 #[repr(C)]
 #[derive(Copy, Clone)]
+#[derive(Debug)]
 pub struct RutabagaFence {
     pub flags: u32,
     pub fence_id: u64,

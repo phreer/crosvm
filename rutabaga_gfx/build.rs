@@ -115,6 +115,8 @@ fn build_virglrenderer(out_dir: &Path) -> Result<()> {
         .arg(format!("-Dplatforms={}", platforms.join(",")))
         .arg("-Dminigbm_allocation=true")
         .arg("-Ddefault_library=static")
+        .arg("-Dvenus-experimental=true")
+        .arg("-Drender-server=true")
         .args(get_meson_cross_args())
         .arg(out_dir.as_os_str())
         .current_dir(VIRGLRENDERER_SRC)
@@ -148,10 +150,10 @@ fn virglrenderer_deps() -> Result<()> {
 #[cfg(feature = "virgl_renderer")]
 fn virglrenderer() -> Result<()> {
     // Use virglrenderer package from the standard system location if available.
-    // if pkg_config::Config::new().probe("virglrenderer").is_ok() {
-    //     virglrenderer_deps()?;
-    //     return Ok(());
-    // }
+    if pkg_config::Config::new().probe("virglrenderer").is_ok() {
+        virglrenderer_deps()?;
+        return Ok(());
+    }
 
     // Otherwise build from source.
     let out_dir = PathBuf::from(env::var("OUT_DIR")?);
