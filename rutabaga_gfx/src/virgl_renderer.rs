@@ -654,11 +654,25 @@ impl RutabagaComponent for VirglRenderer {
             let ret = unsafe { virgl_renderer_resource_create_blob(&resource_create_args) };
             ret_to_res(ret)?;
 
+            let (handle, component_mask) = match resource_create_blob.blob_mem {
+                // Pipe resource is not yet created in virglrenderer at this moment, thus we set
+                // component_mask to zero.
+                RUTABAGA_BLOB_MEM_PRIME => {
+                    if let Some(handle) = _handle_opt {
+                        (Some(Arc::new(handle)), 0)
+                    } else {
+                        return Err(RutabagaError::SpecViolation("no udmabuf handle for PRIME resource"));
+                    }
+                },
+                _ => (self.export_blob(resource_id).ok(),
+                      1 << (RutabagaComponentType::VirglRenderer as u32)),
+            };
+
             // TODO(b/244591751): assign vulkan_info to support opaque_fd mapping via Vulkano when
             // sandboxing (hence external_blob) is enabled.
             Ok(RutabagaResource {
                 resource_id,
-                handle: self.export_blob(resource_id).ok(),
+                handle,
                 blob: true,
                 blob_mem: resource_create_blob.blob_mem,
                 blob_flags: resource_create_blob.blob_flags,
@@ -667,7 +681,7 @@ impl RutabagaComponent for VirglRenderer {
                 info_3d: self.query(resource_id).ok(),
                 vulkan_info: None,
                 backing_iovecs: iovec_opt,
-                component_mask: 1 << (RutabagaComponentType::VirglRenderer as u8),
+                component_mask,
                 size: resource_create_blob.size,
                 mapping: None,
             })

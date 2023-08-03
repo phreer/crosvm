@@ -930,16 +930,30 @@ impl RutabagaComponent for CrossDomain {
         _handle_opt: Option<RutabagaHandle>,
     ) -> RutabagaResult<RutabagaResource> {
         if resource_create_blob.blob_mem != RUTABAGA_BLOB_MEM_GUEST
+            && resource_create_blob.blob_mem != RUTABAGA_BLOB_MEM_PRIME
             && resource_create_blob.blob_flags != RUTABAGA_BLOB_FLAG_USE_MAPPABLE
         {
             return Err(RutabagaError::SpecViolation(
-                "expected only guest memory blobs",
+                "expected only PRIME or guest memory blobs",
             ));
         }
 
+        let handle = match _handle_opt {
+            Some(handle) => Some(Arc::new(handle)),
+            None => {
+                match resource_create_blob.blob_mem {
+                    RUTABAGA_BLOB_MEM_PRIME => {
+                        return Err(RutabagaError::SpecViolation(
+                            "no udmabuf handle for PRIME resource"));
+                    }
+                    _ => None,
+                }
+            },
+        };
+
         Ok(RutabagaResource {
             resource_id,
-            handle: None,
+            handle: handle,
             blob: true,
             blob_mem: resource_create_blob.blob_mem,
             blob_flags: resource_create_blob.blob_flags,
