@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 prefix ?= /usr/local
-libdir = ${prefix}/lib
+libdir = ${prefix}/lib64
 includedir = ${prefix}/include/rutabaga_gfx
 
 UNAME := $(shell uname -s)
@@ -40,7 +40,7 @@ build:
 
 install: build
 ifeq ($(UNAME), Linux)
-	install -D -m 755 $(OUT)/$(LIB_NAME) $(DESTDIR)$(libdir)
+	install -D -m 755 $(OUT)/$(LIB_NAME) -t $(DESTDIR)$(libdir)
 endif
 ifeq ($(UNAME), Darwin)
         install_name_tool -id $(DESTDIR)$(libdir)/$(LIB_NAME) $(DESTDIR)$(libdir)/$(LIB_NAME)
