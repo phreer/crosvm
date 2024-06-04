@@ -33,6 +33,11 @@ fn use_system_virglrenderer() -> bool {
         || env::var("CROSVM_USE_SYSTEM_VIRGLRENDERER").unwrap_or_else(|_| "0".to_string()) != "0"
 }
 
+fn build_ffi() -> bool {
+    println!("cargo:rerun-if-env-changed=RUTABAGA_GFX_FFI");
+    env::var("RUTABAGA_GFX_FFI").unwrap_or_default() == "1"
+}
+
 /// Returns the target triplet prefix for gcc commands. No prefix is required
 /// for native builds.
 fn get_cross_compile_prefix() -> String {
@@ -221,7 +226,7 @@ fn build_and_probe_virglrenderer(out_dir: &Path) -> Result<()> {
 }
 
 fn virglrenderer() -> Result<()> {
-    if use_system_virglrenderer() && !use_system_minigbm() {
+    if use_system_virglrenderer() && !use_system_minigbm() && !build_ffi() {
         bail!("Must use system minigbm if using system virglrenderer (try setting CROSVM_USE_SYSTEM_MINIGBM=1)");
     }
 

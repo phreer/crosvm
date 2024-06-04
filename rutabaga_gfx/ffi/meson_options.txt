@@ -6,3 +6,10 @@ option(
   value : false,
   description : 'Build gfxstream in rutabaga_gfx_ffi',
 )
+
+option(
+  'virglrenderer',
+  type : 'boolean',
+  value : false,
+  description : 'Build virglrenderer in rutabaga_gfx_ffi',
+)

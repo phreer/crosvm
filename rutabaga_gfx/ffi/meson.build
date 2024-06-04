@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 project('rutabaga_gfx_ffi', ['rust', 'c'],
-         version: '0.1.3')
+        version: files('VERSION'))
 
 target_os = host_machine.system()
 
@@ -19,27 +19,42 @@ if target_os == 'linux'
   shared_lib = 'librutabaga_gfx_ffi.so'
 endif
 
-cargo = find_program('cargo')
-cmd = [cargo, 'build']
+cmd = ['build.sh']
 with_gfxstream = get_option('gfxstream')
+with_virglrenderer = get_option('virglrenderer')
+features = '--features='
 if with_gfxstream
-  cmd += '--features=gfxstream'
+  features += 'gfxstream,'
 endif
+if with_virglrenderer
+  features += 'virgl_renderer,'
+endif
+
+cmd += features
 
 rutabaga_gfx_ffi_ct = custom_target(
   'rutabaga_gfx_ffi_build',
   output: shared_lib,
-  input: ['src/lib.rs', 'Cargo.toml', 'build.rs'],
+  input: ['src/lib.rs', 'Cargo.toml', 'build.sh'],
   command: cmd,
+  env: {
+    'RUTABAGA_GFX_FFI': '1',
+    'PKG_CONFIG_PATH': get_option('pkg_config_path'),
+    'CROSVM_USE_SYSTEM_VIRGLRENDERER': '1',
+    'CARGO_TARGET_DIR': meson.build_root()
+  },
+  install: true,
+  install_dir: get_option('libdir'),
 )
 
 rutabaga_gfx_ffi_h = files('src/include/rutabaga_gfx_ffi.h')
 
-rutabaga_gfx_ffi = library(
-  'rutabaga_gfx_ffi',
-  sources: [rutabaga_gfx_ffi_h, rutabaga_gfx_ffi_ct],
-  version: '0.1.3',
-  install: true,
+pkg = import('pkgconfig')
+pkg.generate(
+  libraries: rutabaga_gfx_ffi_ct,
+  name: 'rutabaga_gfx_ffi',
+  version: meson.project_version(),
+  description: 'C FFI bindings to Rutabaga VGI',
 )
 
 install_headers(rutabaga_gfx_ffi_h,
