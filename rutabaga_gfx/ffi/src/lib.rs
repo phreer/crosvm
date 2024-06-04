@@ -291,6 +291,33 @@ pub extern "C" fn rutabaga_finish(ptr: &mut *mut rutabaga) -> i32 {
     .unwrap_or(-ESRCH)
 }
 
+use ::std::os::raw::c_int;
+#[no_mangle]
+pub extern "C" fn rutabaga_poll_descriptor(ptr: &mut rutabaga, fd: &mut c_int) -> i32 {
+    catch_unwind(AssertUnwindSafe(|| {
+        match ptr.poll_descriptor() {
+            Some(v) => {
+                *fd = v.into_raw_descriptor();
+                NO_ERROR
+            },
+            None => {
+                *fd = -1;
+                NO_ERROR
+            }
+        }
+    }))
+    .unwrap_or(-ESRCH)
+}
+
+#[no_mangle]
+pub extern "C" fn rutabaga_poll(ptr: &mut rutabaga) -> i32 {
+    catch_unwind(AssertUnwindSafe(|| {
+        ptr.event_poll();
+        NO_ERROR
+    }))
+    .unwrap_or(-ESRCH)
+}
+
 #[no_mangle]
 pub extern "C" fn rutabaga_get_num_capsets(ptr: &mut rutabaga, num_capsets: &mut u32) -> i32 {
     catch_unwind(AssertUnwindSafe(|| {
