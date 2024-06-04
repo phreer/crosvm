@@ -186,7 +186,7 @@ struct rutabaga_fence {
     uint32_t flags;
     uint64_t fence_id;
     uint32_t ctx_id;
-    uint32_t ring_idx;
+    uint8_t ring_idx;
 };
 
 struct rutabaga_debug {
