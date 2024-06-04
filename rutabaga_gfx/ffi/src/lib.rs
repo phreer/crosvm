@@ -261,8 +261,10 @@ pub unsafe extern "C" fn rutabaga_init(builder: &rutabaga_builder, ptr: &mut *mu
             _ => return -EINVAL,
         };
 
+        let use_venus = (*builder).capset_mask & (1 << RUTABAGA_CAPSET_VENUS) != 0;
         let result = RutabagaBuilder::new(component_type, (*builder).capset_mask)
             .set_use_external_blob(false)
+            .set_use_render_server(use_venus)
             .set_use_egl(true)
             .set_wsi(rutabaga_wsi)
             .set_debug_handler(debug_handler_opt)
